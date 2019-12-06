@@ -170,7 +170,16 @@ TEST_F(BoardTest, test_next_states) {
     EXPECT_TRUE(std::find(ns.begin(), ns.end(), b3) != ns.end());
   }
 }
-
+TEST_F(BoardTest, test_browns_size) {
+  {
+    Board25 b("ooooo"
+      "..o.o"
+      ".oX.o"
+      "o...o"
+      "oooooX");
+    EXPECT_EQ(16, b.browns_size());
+  }
+}
 
 int main(int ac, char **ag) {
   ::testing::InitGoogleTest(&ac, ag);

@@ -1,6 +1,9 @@
 #include "board.h"
 #include <fstream>
 #include <chrono>
+#include <vector>
+typedef std::vector<int> vI;
+typedef std::vector<vI> vvI;
 
 const int table_size = 15 * 0x2000000;
 
@@ -16,24 +19,25 @@ uint8_t count_table[table_size];
 void usage(char *command) {
   std::cerr << "Usage : " << command << " n count" << std::endl;
   std::cerr << " n - value in the table" << std::endl;
-  std::cerr << " stones - number of brown pieces "<< std::endl;
   std::cerr << " [count] - how many samples to show (zero for all) " << std::endl;
   exit(0);
 }
 
+vvI ret(25, vI(41));
+
 int main(int ac, char **ag) {
-  if (ac < 4) usage(ag[0]);
-  int n = atoi(ag[1]), n_stones = (ac > 2 ? atoi(ag[2]) : -1), count = (ac > 3 ? atoi(ag[3]) : 0);
   std::ifstream f("count_table.bin", std::ios::binary);
   f.read((char *) count_table, sizeof(count_table));
   f.close();
   for (int i = 0; i < table_size; i++) {
-    if (count_table[i] == n) {
-      Board25 b(i);
-      if (n_stones < 0 || b.browns_size() == n_stones) {
-	std::cerr << b << std::endl;
-	if (count > 0 && --count ==0) break;
-      }
-    }
+    Board25 b(i);
+    int c = b.browns_size();
+    ret[c][count_table[i]]++;
+  }
+  for (int i = 0; i < 25; i++) {
+    std::cout << i;
+    for (size_t j = 0; j < 41; j++)
+      std::cout << "," << ret[i][j];
+    std::cout << std::endl;
   }
 }

@@ -190,6 +190,9 @@ public:
     }
     return r;
   }
+  int browns_size() const {
+    return browns().size();
+  }
   std::vector<Board25> next_states(bool debug=false) const {
     std::vector<Board25> r;
     if (debug) std::cerr << "turn()=" << turn() << std::endl;
