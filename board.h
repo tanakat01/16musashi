@@ -4,9 +4,73 @@
 #include <stdexcept>
 #include <vector>
 #include <iostream>
+#include <utility>
+#include <x86intrin.h>
 
 typedef std::vector<int> vI;
 typedef std::pair<int, int> II;
+
+
+static inline uint64_t popcnt(uint64_t n)
+{
+    return(_popcnt64(n));
+}
+
+static inline int bsf(uint64_t mask)
+{
+  assert(mask);
+  uint64_t ret;
+  __asm__("bsfq %1,%0" : "=r"(ret) : "r"(mask));
+  return static_cast<int>(ret);
+}
+
+class PointSetIterator {
+  uint64_t v;
+public:
+  explicit PointSetIterator(uint64_t v_) :v(v_) {}
+  int operator*() const noexcept {
+    return bsf(v);
+  }
+  PointSetIterator operator++() noexcept {
+    v &= (v - 1);
+    return *this;
+  }
+  PointSetIterator operator++(int) noexcept {
+    PointSetIterator old = *this;
+    v &= (v - 1);
+    return old;
+  }
+  uint64_t val() const noexcept {
+    return v;
+  }
+};
+
+static constexpr bool operator==(PointSetIterator const& x,
+                                 PointSetIterator const& y) {
+  return x.val() == y.val();
+}
+
+static constexpr bool operator!=(PointSetIterator const& x,
+                                 PointSetIterator const& y) {
+  return x.val() != y.val();
+}
+
+class PointSet {
+  uint64_t v;
+public:
+  typedef PointSetIterator iterator;
+  explicit PointSet(uint64_t v_) :v(v_) {}
+  PointSetIterator begin() const {
+    return PointSetIterator(v);
+  }
+  PointSetIterator end() const {
+    return PointSetIterator(0);
+  }
+  uint64_t val() const noexcept {
+    return v;
+  }
+};
+
 
 /*
  additional 8 point
@@ -191,7 +255,9 @@ public:
     return r;
   }
   int browns_size() const {
-    return browns().size();
+    // return browns().size();
+    int bpos = (v >> 25) & 31;
+    return popcnt((v & ~(1ull << bpos)) & ((1ull << 25) - 1));
   }
   std::vector<Board25> next_states(bool debug=false) const {
     std::vector<Board25> r;

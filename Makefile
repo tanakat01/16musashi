@@ -1,5 +1,5 @@
 CXX = g++
-CXXFLAGS = -Wall -DNDEBUG -O2 -g -std=c++17
+CXXFLAGS = -Wall -march=native -DNDEBUG -O2 -g -std=c++17
 TESTLIBS = -lgtest -lgtest_main -lpthread
 
 all : solve test_board show_solve count_solve board_value

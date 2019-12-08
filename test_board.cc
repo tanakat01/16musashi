@@ -11,6 +11,20 @@ public:
   }
 };
 
+TEST_F(BoardTest, test_pointset_iteration) {
+  {
+    uint64_t v = (1ull << 5) + (1ull << 34);
+    std::vector<int> points;
+    for (auto p : PointSet(v)) {
+      points.push_back(p);
+    }
+    EXPECT_EQ(2, points.size());
+    EXPECT_TRUE(std::find(points.begin(), points.end(), 5) != points.end());
+    EXPECT_TRUE(std::find(points.begin(), points.end(), 34) != points.end());
+  }
+}
+
+
 TEST_F(BoardTest, test_index) {
   std::vector<int> exists(25);
   for (int y = 0; y < 5; y++)
