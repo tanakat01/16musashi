@@ -1,9 +1,11 @@
 #include "board.h"
 #include <fstream>
 #include <chrono>
+#include <thread>
 
-const int pos_size = 0x1000000;
+const int pos_size = (1ull << 24);
 const int h_table_size = 15 * pos_size;
+const int table_size = 15 * pos_size * 2;
 
 /*
   0 - unknown
@@ -12,34 +14,44 @@ const int h_table_size = 15 * pos_size;
  2*n - (brown turn) brown has move to state 2*n - 1
  2*n + 1 - (black turn) all black move lead to state 2*m (m <= n) 
  */
-uint8_t table_brown[((h_table_size + 7) / 8) * 8];
-uint8_t table_black[((h_table_size + 7) / 8) * 8];
+constexpr uint64_t bytesize(uint64_t sz) {
+  return ((sz + 7) / 8);
+}
 
-void set_table(uint8_t *table, pos) {
+uint8_t table_brown[bytesize(h_table_size)];
+uint8_t table_black[bytesize(h_table_size)];
+
+void set_table(uint8_t *table, int pos) {
   table[pos / 8] |= (1 << (pos % 8));
 }
 
-void test_table(uint8_t *table, pos) {
+bool test_table(uint8_t *table, int pos) {
   return (table[pos / 8] & (1 << (pos % 8))) != 0;
 }
 
 constexpr int black = Board25::black;
 constexpr int brown = Board25::brown;
 
-int main() {
+void solve() {
   auto chrono_start = std::chrono::system_clock::now();
   int changed = 0;
   for (int i = 0; i < h_table_size; i++) {
     if (i % 10000000 == 0) {
       std::cerr << "init : i=" << i << std::endl;
     }
-    Board25 b(i);
+    Board25 b = Board25::from_index(i, Board25::black);
     if (b.turn() == black) {
       if (b.final_value() == 1) {
-	count_table[i] = 1;
+        set_table(table_black, i);
         changed++;
       }
     }
+  }
+  {
+    std::string fname = "black_" + std::to_string(1) + "s.bin";
+    std::ofstream f(fname, std::ios::binary);
+    f.write((char *)(table_black), sizeof(table_black));
+  f.close();
   }
   std::cerr << "changed = " << changed << std::endl;
   for (int step = 2; step < 256; step++) {
@@ -50,48 +62,70 @@ int main() {
     changed = 0;
     bool is_black = ((step & 1) == 1);
     if (is_black) {
-      for (int i = 0; i < table_size; i++) {
-	if (i % 10000000 == 0) {
-	  std::cerr << "step=" << step << ", black : i=" << i << std::endl;
-	}
-	if (count_table[i] != 0) continue;
-	Board25 b(i);
-	if (b.turn() != black) continue;
-	bool has_escape = false;
-	for (auto n_ : b.next_states()) {
+      for (int i = 0; i < h_table_size; i++) {
+        if (i % 10000000 == 0) {
+          std::cerr << "step=" << step << ", black : i=" << i << std::endl;
+        }
+        if (test_table(table_black, i) != 0) continue;
+        Board25 b = Board25::from_index(i, Board25::black);
+        if (b.to_index() != i) {
+          std::cerr << "i=" << i << ",b.to_index()="  << b.to_index() << std::endl;
+          throw std::runtime_error("index error");
+        }
+        // if (b.turn() != black) continue;
+        bool has_escape = false;
+        for (auto n_ : b.next_states()) {
           Board25 n(n_);
-	  if (n.v >= table_size) n = n.flip();
-	  if (count_table[n.v] == 0) {has_escape = true; break;}
-	}
-	if (!has_escape){
-	  count_table[i] = step;
-	  changed++;
-	}
+          if (n.v >= table_size) n = n.flip();
+          if (!test_table(table_brown, n.to_index())) {
+            has_escape = true; break;
+          }
+        }
+        if (!has_escape) {
+          set_table(table_black, i);
+          changed++;
+        }
       }
-    }
-    else {
-      for (int i = 0; i < table_size; i++) {
-	if (i % 10000000 == 0) {
-	  std::cerr << "step=" << step << ", brown : i=" << i << std::endl;
-	}
-	if (count_table[i] != 0) continue;
-	Board25 b(i);
-	if (b.turn() != brown) continue;
-	bool has_capture = false;
-	for (auto n_ : b.next_states()) {
+    } else {
+      for (int i = 0; i < h_table_size; i++) {
+        if (i % 10000000 == 0) {
+          std::cerr << "step=" << step << ", brown : i=" << i << std::endl;
+        }
+        if (test_table(table_brown, i) != 0) continue;
+        Board25 b = Board25::from_index(i, Board25::brown);
+        if (b.to_index() != i) {
+          std::cerr << "i=" << i << ",b.to_index()="  << b.to_index() << std::endl;
+          throw std::runtime_error("index error");
+        }
+        bool has_capture = false;
+        for (auto n_ : b.next_states()) {
           Board25 n(n_);
-	  if (count_table[n.v] != 0) {has_capture = true; break;}
-	}
-	if (has_capture){
-	  count_table[i] = step;
-	  changed++;
-	}
+          if (test_table(table_black, n.to_index())) {
+            has_capture = true; break;
+          }
+        }
+        if (has_capture) {
+          set_table(table_brown, i);
+          changed++;
+        }
       }
     }
     std::cerr << "changed = " << changed << std::endl;
     if (changed == 0) break;
+    if (is_black) {
+      std::string fname = "black_" + std::to_string(step) + "s.bin";
+      std::ofstream f(fname, std::ios::binary);
+      f.write((char *)(table_black), sizeof(table_black));
+      f.close();
+    } else {
+      std::string fname = "brown_" + std::to_string(step) + "s.bin";
+      std::ofstream f(fname, std::ios::binary);
+      f.write((char *)(table_brown), sizeof(table_brown));
+      f.close();
+    }
   }
-  std::ofstream f("count_table1.bin", std::ios::binary);
-  f.write((char *) count_table, sizeof(count_table));
-  f.close();
+}
+
+int main() {
+  solve();
 }
