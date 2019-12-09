@@ -25,7 +25,7 @@ TEST_F(BoardTest, test_pointset_iteration) {
 }
 
 
-TEST_F(BoardTest, test_index) {
+TEST_F(BoardTest, test_pos) {
   std::vector<int> exists(25);
   for (int y = 0; y < 5; y++)
     for (int x = 0; x < 5; x++) {
@@ -63,21 +63,35 @@ TEST_F(BoardTest, makeup) {
 }
 
 TEST_F(BoardTest, test_movable) {
-  Board25 b("ooooo"
-	    "o...o"
-	    "o.X.o"
-	    "o...o"
-	    "oooooo");
   {
-    vI ps = b.movable(Board25::toPos(0, 0));
-    EXPECT_EQ(1, ps.size());
-    EXPECT_EQ(Board25::toPos(1, 1), ps[0]);
+    Board25 b("o...."
+              "oo..."
+              "Xoo.."
+              "o...."
+              "....."
+              "o");
+    {
+      PointSet ps = b.movable(Board25::toPos(0, 1));
+      EXPECT_EQ(0, ps.size());
+    }
   }
   {
-    vI ps = b.movable(Board25::toPos(2, 3));
-    EXPECT_EQ(2, ps.size());
-    EXPECT_TRUE(std::find(ps.begin(), ps.end(), Board25::toPos(1, 3)) != ps.end());
-    EXPECT_TRUE(std::find(ps.begin(), ps.end(), Board25::toPos(3, 3)) != ps.end());
+    Board25 b("ooooo"
+              "o...o"
+              "o.X.o"
+              "o...o"
+              "oooooo");
+    {
+      PointSet ps = b.movable(Board25::toPos(0, 0));
+      EXPECT_EQ(1, ps.size());
+      EXPECT_TRUE(ps.test(Board25::toPos(1, 1)));
+    }
+    {
+      PointSet ps = b.movable(Board25::toPos(2, 3));
+      EXPECT_EQ(2, ps.size());
+      EXPECT_TRUE(ps.test(Board25::toPos(1, 3)));
+      EXPECT_TRUE(ps.test(Board25::toPos(3, 3)));
+    }
   }
 }
 
@@ -129,6 +143,36 @@ TEST_F(BoardTest, test_flip) {
 
 TEST_F(BoardTest, test_next_states) {
   {
+    Board25 b("o...."
+              "oo..."
+              "Xoo.."
+              "o...."
+              "....."
+              "o");
+    Board25 b1("o...."
+               "oo..."
+               "Xo..."
+               "o.o.."
+               "....."
+               "X");
+    Board25 b2("o...."
+               "oo..."
+               "Xoo.."
+               "....."
+               ".o..."
+               "X");
+    std::vector<Board25> ns = b.next_states_v();
+    EXPECT_EQ(13, ns.size());
+#if 0
+    for (auto b : ns) {
+      std::cerr << "b.v=" << b.v << "," << Board25(b) << std::endl;
+    }
+#endif
+    EXPECT_TRUE(std::find(ns.begin(), ns.end(), b1) != ns.end());
+    EXPECT_TRUE(std::find(ns.begin(), ns.end(), b2) == ns.end());
+    return;
+  }
+  {
     Board25 b("ooooo"
 	      "o...o"
 	      "o.X.o"
@@ -144,7 +188,7 @@ TEST_F(BoardTest, test_next_states) {
 	       "o.Xoo"
 	       "o...o"
 	       "oooooX");
-    std::vector<Board25> ns = b.next_states();
+    std::vector<Board25> ns = b.next_states_v();
     EXPECT_EQ(24, ns.size());
 #if 0
     for (auto b : ns) {
@@ -177,13 +221,19 @@ TEST_F(BoardTest, test_next_states) {
 	       ".o..."
 	       "o..Xo"
 	       "oo.ooo");
-    std::vector<Board25> ns = b.next_states();
+    std::vector<Board25> ns = b.next_states_v();
+#if 0
+    for (auto n : ns) {
+      std::cerr << n << std::endl;
+    }
+#endif    
     EXPECT_EQ(6, ns.size());
     EXPECT_TRUE(std::find(ns.begin(), ns.end(), b1) != ns.end());
     EXPECT_TRUE(std::find(ns.begin(), ns.end(), b2) != ns.end());
     EXPECT_TRUE(std::find(ns.begin(), ns.end(), b3) != ns.end());
   }
 }
+
 TEST_F(BoardTest, test_browns_size) {
   {
     Board25 b("ooooo"
@@ -194,6 +244,27 @@ TEST_F(BoardTest, test_browns_size) {
     EXPECT_EQ(16, b.browns_size());
   }
 }
+
+TEST_F(BoardTest, test_index) {
+  {
+    Board25 b("ooooo"
+      "..o.o"
+      ".oX.o"
+      "o...o"
+      "oooooX");
+    uint64_t i = b.to_index();
+    Board25 b1 = Board25::from_index(i, Board25::black);
+    EXPECT_EQ(b1, b);
+  }
+  {
+    uint64_t i0 = (3 << 24) | 0x80000;
+    Board25 b = Board25::from_index(i0, Board25::brown);
+    uint64_t i1 = b.to_index();
+    EXPECT_EQ(i0, i1);
+    EXPECT_EQ(Board25::brown, b.turn());
+  }
+}
+
 
 int main(int ac, char **ag) {
   ::testing::InitGoogleTest(&ac, ag);
