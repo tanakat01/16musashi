@@ -190,5 +190,5 @@ void solve(int num_workers) {
 }
 
 int main() {
-  solve(4);
+  solve(64);
 }

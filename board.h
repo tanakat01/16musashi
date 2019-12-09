@@ -6,6 +6,7 @@
 #include <iostream>
 #include <utility>
 #include <x86intrin.h>
+#include <cassert>
 
 typedef std::vector<int> vI;
 typedef std::pair<int, int> II;
@@ -56,12 +57,12 @@ std::ostream& operator<<(std::ostream& os, PointSetIterator const& a) {
   return os << a.v;
 }
 
-static constexpr bool operator==(PointSetIterator const& x,
+static inline bool operator==(PointSetIterator const& x,
                                  PointSetIterator const& y) {
   return x.val() == y.val();
 }
 
-static constexpr bool operator!=(PointSetIterator const& x,
+static inline bool operator!=(PointSetIterator const& x,
                                  PointSetIterator const& y) {
   return x.val() != y.val();
 }
@@ -165,8 +166,9 @@ class Board25 {
   static constexpr int yoffsets[5] = {10, 5, 0, 15, 20};
 public:
   const static uint64_t brown_size = (1ull << 25);
-  const static int black = 0;
-  const static int brown = 1;
+  enum {
+    black = 0,
+    brown = 1};
   uint64_t v;
   Board25(uint64_t v_) :v(v_){}
   Board25(std::string const& s):v(0u) {
