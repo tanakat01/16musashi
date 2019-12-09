@@ -2,10 +2,12 @@
 #include <fstream>
 #include <chrono>
 #include <thread>
+#include <atomic>
+#include <mutex>
 
-const int pos_size = (1ull << 24);
-const int h_table_size = 15 * pos_size;
-const int table_size = 15 * pos_size * 2;
+const size_t pos_size = (1ull << 24);
+const size_t h_table_size = 15 * pos_size;
+const size_t table_size = 15 * pos_size * 2;
 
 /*
   0 - unknown
@@ -14,7 +16,7 @@ const int table_size = 15 * pos_size * 2;
  2*n - (brown turn) brown has move to state 2*n - 1
  2*n + 1 - (black turn) all black move lead to state 2*m (m <= n) 
  */
-constexpr uint64_t bytesize(uint64_t sz) {
+constexpr size_t bytesize(uint64_t sz) {
   return ((sz + 7) / 8);
 }
 
@@ -32,38 +34,46 @@ bool test_table(uint8_t *table, int pos) {
 constexpr int black = Board25::black;
 constexpr int brown = Board25::brown;
 
-void solve() {
-  auto chrono_start = std::chrono::system_clock::now();
-  int changed = 0;
-  for (int i = 0; i < h_table_size; i++) {
-    if (i % 10000000 == 0) {
-      std::cerr << "init : i=" << i << std::endl;
-    }
-    Board25 b = Board25::from_index(i, Board25::black);
-    if (b.turn() == black) {
-      if (b.final_value() == 1) {
-        set_table(table_black, i);
-        changed++;
+std::mutex io_lock;
+
+const int BSIZE = 256;
+
+std::atomic<uint64_t> changed;
+
+void init_worker(int num_workers, int n) {
+  uint64_t l_changed = 0;
+  size_t s_index = BSIZE * n;
+  for (size_t j = s_index; j < h_table_size; j += BSIZE * num_workers) {
+    for (size_t i = j; i < std::min(j + BSIZE, h_table_size); i++) {
+      if (i % 10000000 == 0) {
+        {
+          std::lock_guard<std::mutex> l_(io_lock);
+          std::cerr << "init : i=" << i << std::endl;
+        }
+      }
+      Board25 b = Board25::from_index(i, Board25::black);
+      if (b.turn() == black) {
+        if (b.final_value() == 1) {
+          set_table(table_black, i);
+          l_changed++;
+        }
       }
     }
   }
-  {
-    std::string fname = "black_" + std::to_string(1) + "s.bin";
-    std::ofstream f(fname, std::ios::binary);
-    f.write((char *)(table_black), sizeof(table_black));
-  f.close();
-  }
-  std::cerr << "changed = " << changed << std::endl;
-  for (int step = 2; step < 256; step++) {
-    auto chrono_end = std::chrono::system_clock::now();
-    std::cerr << "Elapsed time:" << std::chrono::duration_cast<std::chrono::milliseconds>(chrono_end - chrono_start).count() << "[ms]" << std::endl;
+  changed += l_changed;
+}
 
-    std::cerr << "step=" << step << std::endl;
-    changed = 0;
-    bool is_black = ((step & 1) == 1);
-    if (is_black) {
-      for (int i = 0; i < h_table_size; i++) {
+
+void worker(int step, int num_workers, int n) {
+//   std::cerr << "worker(step=" << step << ",num_workers=" << num_workers << ",n=" << n << std::endl;
+  uint64_t l_changed = 0;
+  size_t s_index = BSIZE * n;
+  bool is_black = ((step & 1) == 1);
+  if (is_black) {
+    for (size_t j = s_index; j < h_table_size; j += BSIZE * num_workers) {
+      for (size_t i = j; i < std::min(j + BSIZE, h_table_size); i++) {
         if (i % 10000000 == 0) {
+          std::lock_guard<std::mutex> l_(io_lock);
           std::cerr << "step=" << step << ", black : i=" << i << std::endl;
         }
         if (test_table(table_black, i) != 0) continue;
@@ -83,12 +93,15 @@ void solve() {
         }
         if (!has_escape) {
           set_table(table_black, i);
-          changed++;
+          l_changed++;
         }
       }
-    } else {
-      for (int i = 0; i < h_table_size; i++) {
+    }
+  } else {
+    for (size_t j = s_index; j < h_table_size; j += BSIZE * num_workers) {
+      for (size_t i = j; i < std::min(j + BSIZE, h_table_size); i++) {
         if (i % 10000000 == 0) {
+          std::lock_guard<std::mutex> l_(io_lock);
           std::cerr << "step=" << step << ", brown : i=" << i << std::endl;
         }
         if (test_table(table_brown, i) != 0) continue;
@@ -106,13 +119,63 @@ void solve() {
         }
         if (has_capture) {
           set_table(table_brown, i);
-          changed++;
+          l_changed++;
         }
       }
     }
+  }
+  changed += l_changed;
+}
+
+
+void solve(int num_workers) {
+  auto chrono_start = std::chrono::system_clock::now();
+  changed = 0;
+#if 0
+  for (int i = 0; i < h_table_size; i++) {
+    if (i % 10000000 == 0) {
+      std::cerr << "init : i=" << i << std::endl;
+    }
+    Board25 b = Board25::from_index(i, Board25::black);
+    if (b.turn() == black) {
+      if (b.final_value() == 1) {
+        set_table(table_black, i);
+        changed++;
+      }
+    }
+  }
+#else
+  std::vector<std::thread> threads(num_workers);
+  for (int i = 0; i < num_workers; i++) {
+    threads[i] = std::thread(init_worker, num_workers, i);
+  }
+  for (int i = 0; i < num_workers; i++) {
+    threads[i].join();
+  }
+#endif
+  std::cerr << "changed = " << changed << std::endl;
+  {
+    std::string fname = "black_" + std::to_string(1) + "s.bin";
+    std::ofstream f(fname, std::ios::binary);
+    f.write((char *)(table_black), sizeof(table_black));
+  f.close();
+  }
+  for (int step = 2; step < 256; step++) {
+    auto chrono_end = std::chrono::system_clock::now();
+    std::cerr << "Elapsed time:" << std::chrono::duration_cast<std::chrono::milliseconds>(chrono_end - chrono_start).count() << "[ms]" << std::endl;
+
+    std::cerr << "step=" << step << std::endl;
+    changed = 0;
+    std::vector<std::thread> threads(num_workers);
+    for (int i = 0; i < num_workers; i++) {
+      threads[i] =std::thread(worker, step, num_workers, i);
+    }
+    for (int i = 0; i < num_workers; i++) {
+      threads[i].join();
+    }
     std::cerr << "changed = " << changed << std::endl;
     if (changed == 0) break;
-    if (is_black) {
+    if ((step & 1) == 1) {
       std::string fname = "black_" + std::to_string(step) + "s.bin";
       std::ofstream f(fname, std::ios::binary);
       f.write((char *)(table_black), sizeof(table_black));
@@ -127,5 +190,5 @@ void solve() {
 }
 
 int main() {
-  solve();
+  solve(4);
 }
