@@ -1,5 +1,6 @@
 CXX = g++
 CXXFLAGS = -Wall -march=native -DNDEBUG -O2 -g -std=c++17
+# CXXFLAGS = -Wall -march=native -O0 -g -std=c++17
 TESTLIBS = -lgtest -lgtest_main -lpthread
 
 all : solve test_board show_solve count_solve board_value
@@ -8,6 +9,11 @@ test_board.o : test_board.cc board.h
 
 test_board : test_board.o
 	$(CXX) -o test_board test_board.o $(TESTLIBS)
+
+test_board33.o : test_board33.cc board.h
+
+test_board33 : test_board33.o
+	$(CXX) -o test_board33 test_board33.o $(TESTLIBS)
 
 solve.o : solve.cc board.h
 

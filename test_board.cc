@@ -3,7 +3,7 @@
 #include <vector>
 #include <string>
 
-constexpr int Board25::yoffsets[5];
+using Board25 = Board<25>;
 
 class BoardTest : public ::testing::Test {
 public:
@@ -62,7 +62,41 @@ TEST_F(BoardTest, makeup) {
     }
 }
 
+TEST_F(BoardTest, neighbors) {
+  {
+    vI ps = Board25::neighbors_slow(Board25::toPos(2, 2));
+    EXPECT_EQ(8, ps.size());
+  }
+  {
+    PointSet ps = Board25::neighbors(Board25::toPos(2, 2));
+    EXPECT_EQ(8, ps.size());
+    std::cerr << "pos=" << Board25::toPos(2, 2) << ", ps=" << ps << std::endl;
+    for (int pos = 0; pos < 25; ++pos)
+      std::cerr << "board25Table.neighbors[" << pos << "]=" << board25Table.neighbors(pos) << std::endl;
+  }
+}
+
 TEST_F(BoardTest, test_movable) {
+  {
+    Board25 b("o...."
+              "oo..."
+              "Xoo.."
+              "o...."
+              "....."
+              "o");
+    {
+      PointSet ps = b.movable(Board25::toPos(2, 2));
+      EXPECT_EQ(6, ps.size());
+    }
+    {
+      PointSet ps = b.movable(Board25::toPos(0, 0));
+      EXPECT_EQ(1, ps.size());
+    }
+    {
+      PointSet ps = b.movable(Board25::toPos(1, 1));
+      EXPECT_EQ(3, ps.size());
+    }
+  }
   {
     Board25 b("o...."
               "oo..."
@@ -163,7 +197,7 @@ TEST_F(BoardTest, test_next_states) {
                "X");
     std::vector<Board25> ns = b.next_states_v();
     EXPECT_EQ(13, ns.size());
-#if 0
+#if 1
     for (auto b : ns) {
       std::cerr << "b.v=" << b.v << "," << Board25(b) << std::endl;
     }
