@@ -263,17 +263,17 @@ class Board {
       else return pos - 13;
     }
   }
-  static constexpr int l2size() {
+  static constexpr uint64_t l2size() {
     if (SIZE == 25) return 5;
     else return 7;
   }
-  static constexpr int l01size() {
+  static constexpr uint64_t l01size() {
     return (SIZE - l2size()) / 2;
   }
   Board<SIZE> flip() const {
     uint64_t bpos = ppos();
     uint64_t turn = (v >> bpos) & 1;
-    uint64_t v_ = v & ~(1u << bpos);
+    uint64_t v_ = v & ~(1ull << bpos);
 
     uint64_t n = v_ & ((1ull << l2size()) - 1);
     n |= ((v_ >> l2size()) & ((1ull << l01size()) - 1)) << (l01size() + l2size());
@@ -327,7 +327,7 @@ class Board {
   static bool hasN8(int x, int y) {
     return ((x + y) & 1) == 0;
   }
-  static int toPos(int x, int y) {
+  static size_t toPos(int x, int y) {
     int r = yoffsets(y) + x;
     if (x == 6 && (y == 0 || y == 4)) r--;
     assert(r < SIZE);
@@ -338,10 +338,10 @@ class Board {
   }
   char get(int x, int y) const {
     II pxy = pXY();
+    if (!hasPoint(x, y)) return '.';
     if (II(x, y) == pxy) return 'X';
     if ((v & (1ull << toPos(x, y))) != 0) return 'o';
-    if (hasPoint(x, y)) return '.';
-    return ' ';
+    return '.';
   }
   char get(int pos) const {
     if (pos == ppos()) return 'X';
@@ -370,10 +370,11 @@ class Board {
 	    if ((x == 1 || x == 3) && x == y && dx * dy > 0) continue;
 	    if ((x == 1 || x == 3) && x == (4 - y) && dx * dy < 0) continue;
 	  }
+	  if (x == 5 && (y == 1 || y == 3) && dx == 1 && dy == 0) continue;
 	  if (x == 6 && y == 2 && dx == -1 && dy == 0) continue;
+	  if (x == 6 && dx == 0) dy *= 2;
 	}
 	if ((x == 4 && y != 2) && dx == 1) continue;
-	if (SIZE == 31 && x == 6) dy *= 2;
 	int x1 = x + dx, y1 = y + dy;
 	if (x == 5 && dx == -1 && y1 != 2) continue;
 	if (x == 6 && dx == -1 && (y1 == 0 || y1 == 4)) continue;
@@ -386,7 +387,6 @@ class Board {
 	if ((x == 4 && y != 2) && dx == 1) continue;
 	if (SIZE == 31) {
 	  if (x == 5 && y == 2 && dx == 1) continue;
-	  if (x == 6 && y == 2 && dx == -1 && dy == 0) continue;
 	}
 	if (hasPoint(x1, y1)) r.push_back(toPos(x1, y1));
       }
@@ -489,6 +489,7 @@ class Board {
       return 0;
     }
   }
+
   std::string to_s() const {
     std::string r;
     for (int y = 0; y < HEIGHT(); y++) {
@@ -598,7 +599,7 @@ inline int Board<SIZE>::browns_size() const {
 template<int SIZE>
 PointSet Board<SIZE>::movable(int pos) const {
   return ~pieces() & (SIZE == 25 ? board25Table.neighbors(pos) :
-		      (SIZE == 21 ? board31Table.neighbors(pos) :
+		      (SIZE == 31 ? board31Table.neighbors(pos) :
 		       board33Table.neighbors(pos)));
 }
 
@@ -688,5 +689,5 @@ static inline std::ostream& operator<<(std::ostream& os, Board<SIZE> const& v) {
   auto s = v.to_s();
   for (int y = 0; y < Board<SIZE>::HEIGHT(); y++)
     os << s.substr(y * Board<SIZE>::WIDTH(), Board<SIZE>::WIDTH()) << std::endl;
-  return os << s.substr(Board<SIZE>::WIDTH() * Board<SIZE>::WIDTH(), 1);
+  return os << s.substr(Board<SIZE>::WIDTH() * Board<SIZE>::HEIGHT(), 1);
 }

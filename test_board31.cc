@@ -3,9 +3,9 @@
 #include <vector>
 #include <string>
 
-using Board33 = Board<33>;
-static const int SIZE = 33;
-using B = Board33;
+using Board31 = Board<31>;
+static const int SIZE = 31;
+using B = Board31;
 
 static const int WIDTH = B::WIDTH();
 static const int HEIGHT = B::HEIGHT();
@@ -48,10 +48,10 @@ TEST_F(BoardTest, test_pos) {
 
 TEST_F(BoardTest, makeFromV) {
   {
-    B b(38655242320ull);
-    EXPECT_EQ(5, b.browns_size());
-    std::cerr << std::hex << "b.v=" << b.v << std::endl;
-    std::cerr << b << std::endl;
+    B b(0x3'4050'3300ull);
+    EXPECT_EQ(7, b.browns_size());
+    //    std::cerr << std::hex << "b.v=" << b.v << std::endl;
+    // std::cerr << b << std::endl;
   }
 }
 
@@ -82,12 +82,27 @@ TEST_F(BoardTest, makeup) {
 
 TEST_F(BoardTest, neighbors) {
   {
-    vI ps = B::neighbors_slow(B::toPos(2, 2));
-    EXPECT_EQ(8, ps.size());
+    int msize[5][7] = {{2, 3, 5, 3, 2, 0, 2},
+		       {3, 6, 4, 6, 3, 4, 0},
+		       {5, 4, 4, 4, 8, 3, 4},
+		       {3, 6, 4, 6, 3, 4, 0},
+		       {2, 3, 5, 3, 2, 0, 2}};
+    int i = 0;
+    for (int y = 0; y < B::HEIGHT(); y++)
+      for (int x = 0; x < B::WIDTH(); x++) {
+	if (!B::hasPoint(x, y)) continue;
+	i++;
+	PointSet ps = B::neighbors(B::toPos(x, y));
+	if (msize[y][x] != ps.size())
+	  std::cerr << "x=" << x << ",y=" << y << std::endl;
+	EXPECT_EQ(msize[y][x], ps.size());
+      }
   }
   {
     PointSet ps = B::neighbors(B::toPos(2, 2));
-    EXPECT_EQ(8, ps.size());
+    vI ps_v = B::neighbors_slow(B::toPos(2, 2));
+    EXPECT_EQ(4, ps.size());
+    EXPECT_EQ(4, ps_v.size());
   }
   {
     PointSet ps = B::neighbors(B::toPos(4, 2));
@@ -98,14 +113,26 @@ TEST_F(BoardTest, neighbors) {
   {
     PointSet ps = B::neighbors(B::toPos(5, 1));
     vI ps_v = B::neighbors_slow(B::toPos(5, 1));
-    EXPECT_EQ(5, ps.size());
-    EXPECT_EQ(5, ps_v.size());
+    EXPECT_EQ(4, ps.size());
+    EXPECT_EQ(4, ps_v.size());
+  }
+  {
+    PointSet ps = B::neighbors(B::toPos(5, 2));
+    vI ps_v = B::neighbors_slow(B::toPos(5, 2));
+    EXPECT_EQ(3, ps.size());
+    EXPECT_EQ(3, ps_v.size());
   }
   {
     PointSet ps = B::neighbors(B::toPos(6, 0));
     vI ps_v = B::neighbors_slow(B::toPos(6, 0));
     EXPECT_EQ(2, ps.size());
     EXPECT_EQ(2, ps_v.size());
+  }
+  {
+    PointSet ps = B::neighbors(B::toPos(6, 2));
+    vI ps_v = B::neighbors_slow(B::toPos(6, 2));
+    EXPECT_EQ(4, ps.size());
+    EXPECT_EQ(4, ps_v.size());
   }
   {
     PointSet ps = B::neighbors(B::toPos(4, 1));
@@ -117,22 +144,24 @@ TEST_F(BoardTest, neighbors) {
   {
     PointSet ps = B::neighbors(B::toPos(4, 0));
     vI ps_v = B::neighbors_slow(B::toPos(4, 0));
-    EXPECT_EQ(3, ps.size());
-    EXPECT_EQ(3, ps_v.size());
+    EXPECT_EQ(2, ps.size());
+    EXPECT_EQ(2, ps_v.size());
   }
 }
 
 TEST_F(BoardTest, test_movable) {
   {
-    B b("o.... ."
+    B b("o......"
 	"oo...o."
 	"Xoo.o.."
 	"o...o.."
-	"..... o"
+	"......o"
 	"o");
     {
       PointSet ps = b.movable(B::toPos(2, 2));
-      EXPECT_EQ(6, ps.size());
+      //std::cerr << "ps=" << ps << std::endl;
+      //std::cerr << "neighbors=" << b.neighbors(B::toPos(2, 2)) << std::endl;
+      EXPECT_EQ(3, ps.size());
     }
     {
       PointSet ps = b.movable(B::toPos(0, 0));
@@ -144,7 +173,7 @@ TEST_F(BoardTest, test_movable) {
     }
     {
       PointSet ps = b.movable(B::toPos(5, 1));
-      EXPECT_EQ(4, ps.size());
+      EXPECT_EQ(3, ps.size());
     }
     {
       PointSet ps = b.movable(B::toPos(4, 2));
@@ -179,8 +208,7 @@ TEST_F(BoardTest, test_movable) {
 	"ooooo .o");
     {
       PointSet ps = b.movable(B::toPos(0, 0));
-      EXPECT_EQ(1, ps.size());
-      EXPECT_TRUE(ps.test(B::toPos(1, 1)));
+      EXPECT_EQ(0, ps.size());
     }
     {
       PointSet ps = b.movable(B::toPos(2, 3));
@@ -239,11 +267,11 @@ TEST_F(BoardTest, test_flip) {
     B b("......."
 	"......."
 	"..X.ooo"
-	"......o"
+	"......."
 	"......o"
 	"o");
     B b1("......o"
-	 "......o"
+	 "......."
 	 "..X.ooo"
 	 "......."
 	 "......."
@@ -257,20 +285,20 @@ TEST_F(BoardTest, test_flip) {
 
 TEST_F(BoardTest, test_next_states) {
   {
-    B b("o.... ."
-	"oo....o"
+    B b("o.... o"
+	"oo....."
 	"Xoo...."
 	"o......"
 	"..... ."
 	"o");
-    B b1("o.... ."
-	 "oo....o"
+    B b1("o.... o"
+	 "oo....."
 	 "Xo....."
 	 "o.o...."
 	 "..... ."
 	 "X");
-    B b2("o.... ."
-	 "oo....o"
+    B b2("o.... o"
+	 "oo....."
 	 "Xoo...."
 	 "......."
 	 ".o... ."
@@ -281,8 +309,14 @@ TEST_F(BoardTest, test_next_states) {
 	 "o......"
 	 "..... ."
 	 "X");
+    B b4("o.... ."
+	 "oo....."
+	 "Xoo...o"
+	 "o......"
+	 "..... ."
+	 "X");
     std::vector<B> ns = b.next_states_v();
-    EXPECT_EQ(16, ns.size());
+    EXPECT_EQ(12, ns.size());
 #if 0
     for (auto b : ns) {
       std::cerr << "b.v=" << b.v << "," << B(b) << std::endl;
@@ -291,6 +325,7 @@ TEST_F(BoardTest, test_next_states) {
     EXPECT_TRUE(std::find(ns.begin(), ns.end(), b1) != ns.end());
     EXPECT_TRUE(std::find(ns.begin(), ns.end(), b2) == ns.end());
     EXPECT_TRUE(std::find(ns.begin(), ns.end(), b3) != ns.end());
+    EXPECT_TRUE(std::find(ns.begin(), ns.end(), b4) != ns.end());
     return;
   }
   {

@@ -4,6 +4,8 @@
 #include <thread>
 #include <atomic>
 #include <mutex>
+#include <boost/program_options.hpp>
+namespace po = boost::program_options;
 
 constexpr size_t bytesize(uint64_t sz) {
   return ((sz + 7) / 8);
@@ -235,10 +237,62 @@ public:
   }
 };
 
-int main() {
-  TableMaker<25, 0>().solve(8);
-  TableMaker<25, 1>().solve(8);
-  TableMaker<25, 2>().solve(8);
-  TableMaker<25, 3>().solve(8);
-  TableMaker<25, 4>().solve(8);
+int main(int ac, char **ag) {
+  int board_size;
+  int capture_type;
+  int n_workers;
+  
+  po::options_description options("all_options");
+  options.add_options()
+    ("board-size,n",
+     po::value<int>(&board_size)->default_value(25),
+     "board size (25, 31, 33)")
+    ("capture-type,t",
+     po::value<int>(&capture_type)->default_value(0),
+     "capture type : 0 (ALL), 1(any corner), 2(one corner), 3(1,0), 4(2,0)")
+    ("n-workers,w",
+     po::value<int>(&n_workers)->default_value(8),
+     "number of workers")
+    ;
+  po::variables_map vm;
+  try
+    {
+      po::store(po::parse_command_line(ac, ag, options), vm);
+      po::notify(vm);
+    }
+  catch (std::exception& e)
+    {
+      std::cerr << "error in parsing options" << std::endl
+		<< e.what() << std::endl;
+      std::cerr << options << std::endl;
+      return 1;
+    }
+  if (vm.count("help")) {
+    std::cerr << options << std::endl;
+    return 0;
+  }
+  if (board_size == 25) {
+    if (capture_type == 0)
+      TableMaker<25, 0>().solve(n_workers);
+    else if (capture_type == 1)
+      TableMaker<25, 1>().solve(n_workers);
+    else if (capture_type == 2)
+      TableMaker<25, 2>().solve(n_workers);
+    else if (capture_type == 3)
+      TableMaker<25, 3>().solve(n_workers);
+    else if (capture_type == 4)
+      TableMaker<25, 4>().solve(n_workers);
+    else {
+      std::cerr << options << std::endl;
+      return 0;
+    }
+  }
+  else if (board_size == 33) {
+    if (capture_type == 0)
+      TableMaker<33, 0>().solve(n_workers);
+  }
+  else {
+    std::cerr << options << std::endl;
+    return 0;
+  }
 }
