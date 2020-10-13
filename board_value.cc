@@ -26,7 +26,7 @@ void show_board(CountReader<SIZE, capture_type> &cr, Board<SIZE> const& b) {
   std::cerr << "b.v=" << b.v << "\n" << b << std::endl;
   Board<SIZE> b1 = b;
   if (b.v >= CountReader<SIZE, capture_type>::table_size()) b1 = b.flip(); 
-  std::cerr << "b1.v=" << b1.v << "\n" << b1 << std::endl;
+  // std::cerr << "b1.v=" << b1.v << "\n" << b1 << std::endl;
   int c = cr.get(b1.v);
   std::cerr << c << std::endl;
   if (c <= 1) return;
@@ -36,11 +36,11 @@ void show_board(CountReader<SIZE, capture_type> &cr, Board<SIZE> const& b) {
   int loss_count = 0;
   int ns_size = 0;
   for (auto n : ns) {
-    std::cerr << "n=" << n << ",cr.get(n)=" << int(cr.get(n)) << std::endl;
+    // std::cerr << "n=" << n << ",cr.get(n)=" << int(cr.get(n)) << std::endl;
     ns_size++;
     Board<SIZE> n1(n);
-    std::cerr << "n1=" << n1 << std::endl;
-    //    if (n1.v >= table_size) n1 = n1.flip();
+    // std::cerr << "n1=" << n1 << std::endl;
+    // if (n1.v >= table_size) n1 = n1.flip();
     if (cr.get(n1.v) == 0) loss_count++;
     if (cr.get(n1.v) == c - 1) {
       best_n = Board<SIZE>(n);
@@ -113,6 +113,10 @@ int main(int ac, char **ag) {
       std::cerr << options << std::endl;
       return 0;
     }
+  }
+  else if (board_size == 31) {
+    if (capture_type == 0)
+      show<31, 0>();
   }
   else if (board_size == 33) {
     if (capture_type == 0)

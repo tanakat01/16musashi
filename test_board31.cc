@@ -285,6 +285,38 @@ TEST_F(BoardTest, test_flip) {
 
 TEST_F(BoardTest, test_next_states) {
   {
+    B b("o.....o"
+	"...o.X."
+	"......."
+	"o....o."
+	"..... o"
+	"X");
+    B b1("o......"
+	"...o..."
+	"......X"
+	"o....o."
+	"..... ."
+	"o");
+    B b2("o.... o"
+	"......."
+	"....X.."
+	"o......"
+	"..... o"
+	"o");
+    B b3("o.... o"
+	"...o..."
+	".....X."
+	"o....o."
+	"..... o"
+	"o");
+    std::vector<B> ns = b.next_states_v();
+    EXPECT_EQ(3, ns.size());
+    EXPECT_TRUE(std::find(ns.begin(), ns.end(), b1) != ns.end());
+    EXPECT_TRUE(std::find(ns.begin(), ns.end(), b2) != ns.end());
+    EXPECT_TRUE(std::find(ns.begin(), ns.end(), b3) != ns.end());
+    return;
+  }
+  {
     B b("o.... o"
 	"oo....."
 	"Xoo...."

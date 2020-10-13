@@ -6,6 +6,8 @@
 #include <mutex>
 #include <vector>
 #include <ios>
+#include <boost/program_options.hpp>
+namespace po = boost::program_options;
 
 typedef std::vector<char> vC;
 typedef std::vector<vC> vvC;
@@ -157,6 +159,62 @@ public:
   }
 };
 
-int main() {
-  Merger<33, 0>().merge();
+int main(int ac, char **ag) {
+  int board_size;
+  int capture_type;
+  
+  po::options_description options("all_options");
+  options.add_options()
+    ("board-size,n",
+     po::value<int>(&board_size)->default_value(25),
+     "board size (25, 31, 33)")
+    ("capture-type,t",
+     po::value<int>(&capture_type)->default_value(0),
+     "capture type : 0 (ALL), 1(any corner), 2(one corner), 3(1,0), 4(2,0)")
+    ;
+  po::variables_map vm;
+  try
+    {
+      po::store(po::parse_command_line(ac, ag, options), vm);
+      po::notify(vm);
+    }
+  catch (std::exception& e)
+    {
+      std::cerr << "error in parsing options" << std::endl
+		<< e.what() << std::endl;
+      std::cerr << options << std::endl;
+      return 1;
+    }
+  if (vm.count("help")) {
+    std::cerr << options << std::endl;
+    return 0;
+  }
+  if (board_size == 25) {
+    if (capture_type == 0)
+      Merger<25, 0>().merge();
+    else if (capture_type == 1)
+      Merger<25, 1>().merge();
+    else if (capture_type == 2)
+      Merger<25, 2>().merge();
+    else if (capture_type == 3)
+      Merger<25, 3>().merge();
+    else if (capture_type == 4)
+      Merger<25, 4>().merge();
+    else {
+      std::cerr << options << std::endl;
+      return 0;
+    }
+  }
+  else if (board_size == 31) {
+    if (capture_type == 0)
+      Merger<31, 0>().merge();
+  }
+  else if (board_size == 33) {
+    if (capture_type == 0)
+      Merger<33, 0>().merge();
+  }
+  else {
+    std::cerr << options << std::endl;
+    return 0;
+  }
 }

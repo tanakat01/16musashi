@@ -1,8 +1,8 @@
 #include "board.h"
 #include <fstream>
 #include <chrono>
-#include <boost/program_options.hpp>
 #include "count_reader.h"
+#include <boost/program_options.hpp>
 namespace po = boost::program_options;
 
 /*
@@ -21,6 +21,7 @@ void usage(char *command) {
   exit(0);
 }
 
+int turn = -1;
 template<int SIZE, int capture_type>
 void show_solve(int number_of_moves, int number_of_stones, int print_count) {
   const size_t BLOCK_SIZE = 0x10000;
@@ -29,9 +30,9 @@ void show_solve(int number_of_moves, int number_of_stones, int print_count) {
   size_t offset = 0;
   cr.ifs.seekg(offset, std::ios_base::beg);
   for (size_t i = offset; i < CountReader<SIZE, capture_type>::table_size(); i += BLOCK_SIZE) {
-    if (i % 0x100000 == 0) {
-      std::cerr << "i=" << i << std::endl;
-    }
+      if (i % 0x100000000ull == 0) {
+	std::cerr << "i=" << i << std::endl;
+      }
     char buffer[BLOCK_SIZE];
     size_t read_size = std::min(BLOCK_SIZE, CountReader<SIZE, capture_type>::table_size() - i);
     cr.ifs.read(&buffer[0], read_size);
@@ -39,7 +40,12 @@ void show_solve(int number_of_moves, int number_of_stones, int print_count) {
       int t = buffer[j]; 
       if (number_of_moves >= 0 && t != number_of_moves) continue;
       Board<SIZE> b(i + j);
-      if (t == 0 && b.turn() != Board<SIZE>::brown) continue;
+      Board<SIZE> b1 = b.flip();
+      if (b1.v < i + j) {
+	// std:: cerr << "i+j) = " << (i + j) << ",b=" << b << ",b1=" << b1 << std::endl;
+	continue;
+      }
+      if (t == 0 && (turn >= 0 and b.turn() != uint64_t(turn))) continue;
       int c = b.browns_size();
       if (number_of_stones >= 0 && number_of_stones != c) continue;
       std::cout << "---\n" << t << "\nb.v=" << (i+j) << ",b=" << b << std::endl;
@@ -70,6 +76,9 @@ int main(int ac, char **ag) {
     ("number-of-stones,s",
      po::value<int>(&number_of_stones)->default_value(-1),
      "select states which has the specifined number of brown pieces")
+    ("turn",
+     po::value<int>(&turn)->default_value(-1),
+     "select turn (0 for black, 1 for brown)")
     ("print-count,c",
      po::value<int>(&print_count)->default_value(-1),
      "how many states must be printed")
@@ -106,6 +115,10 @@ int main(int ac, char **ag) {
       std::cerr << options << std::endl;
       return 0;
     }
+  }
+  else if (board_size == 31) {
+    if (capture_type == 0)
+      show_solve<31, 0>(number_of_moves, number_of_stones, print_count);
   }
   else if (board_size == 33) {
     if (capture_type == 0)

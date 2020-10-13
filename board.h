@@ -8,6 +8,7 @@
 #include <x86intrin.h>
 #include <cassert>
 #include <cctype>
+#include <type_traits>
 
 typedef std::vector<int> vI;
 typedef std::pair<int, int> II;
@@ -263,6 +264,11 @@ class Board {
       else return pos - 13;
     }
   }
+  static constexpr int rotate90_pos(int pos) {
+    assert(SIZE == 25);
+    auto [x, y] = XY(pos);
+    return toPos(y, 4 - x);
+  }
   static constexpr uint64_t l2size() {
     if (SIZE == 25) return 5;
     else return 7;
@@ -282,6 +288,41 @@ class Board {
     n |= (bpos1 << SIZE) | (turn << bpos1);
     return Board(n);
   }     
+  Board<SIZE> rotate90() const {
+    assert(SIZE == 25);
+    uint64_t bpos = ppos();
+    uint64_t turn = (v >> bpos) & 1;
+    uint64_t v_ = v & ~(1ull << bpos);
+
+    uint64_t n = 0ull;
+    for (size_t y = 0; y < 5; y++)
+      for (size_t x = 0; x < 5; x++) {
+	uint64_t off1 = toPos(x, y), off2 = toPos(y, 4 - x);
+	n |= (((v_ >> off1) & 1) << off2);
+      }
+    auto [bposx, bposy] = XY(bpos);
+    uint64_t bpos1 = toPos(bposy, 4 - bposx);
+    n |= (bpos1 << SIZE) | (turn << bpos1);
+    return Board<SIZE>(n);
+  }     
+  Board<SIZE> normalize() const {
+    if (SIZE != 25) {
+      Board<SIZE> b1 = flip();
+      if (b1.v < v) return b1;
+      return *this;
+    }
+    uint64_t min_v = v;
+    Board<SIZE> b = Board<SIZE>(v);
+    for (size_t i = 0; i < 2; i++) {
+      for (size_t j = 0; j < 4; j++) {
+	if (min_v > b.v) 
+	  min_v = b.v;
+	b = b.rotate90();
+      }
+      b = b.flip();
+    }
+    return Board(min_v);
+  }
   void flip_turn() {
     uint64_t bpos = ppos();
     // fprintf(stderr, "flip_turn(v = 0x%x, bpos = %d)", v, bpos);   
@@ -538,6 +579,7 @@ BoardTable<SIZE>::BoardTable() {
       std::fill(&c2[pos][0], &c2[pos][4], PointSet());
       int i = 0;
       for (auto [dx, dy] : h8) {
+	if (SIZE == 31 && x == 6 && dx == 0) dy *= 2;
 	int x1 = x + dx, y1 = y + dy;
 	int x2 = x - dx, y2 = y - dy;
 	if (Board<SIZE>::isOnboard(x1, y1) && Board<SIZE>::isOnboard(x2, y2)) {

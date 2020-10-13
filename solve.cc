@@ -287,6 +287,10 @@ int main(int ac, char **ag) {
       return 0;
     }
   }
+  else if (board_size == 31) {
+    if (capture_type == 0)
+      TableMaker<31, 0>().solve(n_workers);
+  }
   else if (board_size == 33) {
     if (capture_type == 0)
       TableMaker<33, 0>().solve(n_workers);

@@ -70,9 +70,11 @@ TEST_F(BoardTest, neighbors) {
   {
     PointSet ps = Board25::neighbors(Board25::toPos(2, 2));
     EXPECT_EQ(8, ps.size());
+#if 0
     std::cerr << "pos=" << Board25::toPos(2, 2) << ", ps=" << ps << std::endl;
     for (int pos = 0; pos < 25; ++pos)
       std::cerr << "board25Table.neighbors[" << pos << "]=" << board25Table.neighbors(pos) << std::endl;
+#endif
   }
 }
 
@@ -175,6 +177,68 @@ TEST_F(BoardTest, test_flip) {
   }
 }
 
+TEST_F(BoardTest, test_rotate90) {
+  {
+    Board25 b("oo.oo"
+	      "oXo.o"
+	      "o..o."
+	      "oo..o"
+	      ".ooooo");
+    Board25 b1("oo.oo"
+	       "o.o.o"
+	       ".o..o"
+	       "oX.oo"
+	       "oooo.o");
+    Board25 b2 = b.rotate90();
+    EXPECT_EQ(b1, b2);
+  }
+  {
+    Board25 b("oX.oo"
+	      "o.o.o"
+	      "o..o."
+	      "oo..o"
+	      ".ooooo");
+    Board25 b1("oo.oo"
+	       "o.o.o"
+	       ".o..o"
+	       "X..oo"
+	       "oooo.o");
+    Board25 b2 = b.rotate90();
+    EXPECT_EQ(b1, b2);
+  }
+}
+
+TEST_F(BoardTest, test_normalize) {
+  {
+    Board25 b("oo.oo"
+	      "oXo.o"
+	      "o..o."
+	      "oo..o"
+	      ".ooooo");
+    Board25 b1("oooo."
+	       "oX.oo"
+	       ".o..o"
+	       "o.o.o"
+	       "oo.ooo");
+    Board25 b2 = b.normalize();
+    EXPECT_EQ(b1, b2);
+  }
+  {
+    Board25 b("ooooo"
+	      "ooooo"
+	      "Xoooo"
+	      "ooooo"
+	      "oooooo");
+    Board25 b1("ooooo"
+	      "ooooo"
+	      "Xoooo"
+	      "ooooo"
+	      "oooooo");
+    Board25 b2 = b.normalize();
+    EXPECT_EQ(b1, b2);
+  }
+}
+
 TEST_F(BoardTest, test_next_states) {
   {
     Board25 b("o...."
@@ -197,7 +261,7 @@ TEST_F(BoardTest, test_next_states) {
                "X");
     std::vector<Board25> ns = b.next_states_v();
     EXPECT_EQ(13, ns.size());
-#if 1
+#if 0
     for (auto b : ns) {
       std::cerr << "b.v=" << b.v << "," << Board25(b) << std::endl;
     }
