@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Vue app</title>
+  <script src="./vue.min.js"></script>
+</head>
+<body>
+<div id="appline">
+  <svg id="boardsvg" viewbox="0 0 350 250" width="50%" height="50%" v-bind:click="click_other()">
+    <line v-for="l in lines" v-bind:x1="grid_x(l.x1)" v-bind:y1="grid_y(l.y1)" v-bind:x2="grid_x(l.x2)" v-bind:y2="grid_y(l.y2)" stroke="gray"></line>
+    <circle v-for="p in points" v-bind:cx="grid_x(p.x)" v-bind:cy="grid_y(p.y)" v-bind:r="p.r" v-bind:fill="p.color"></circle>
+    <circle v-for="p in points" v-bind:cx="grid_x(p.x)" v-bind:cy="grid_y(p.y)" v-bind:r="10" fill="black" fill-opacity="0.0" v-on:click="click_point(p)"></circle>
+    <circle v-for="p in pieces" v-bind:cx="grid_x(p.x)" v-bind:cy="grid_y(p.y)" v-bind:r="rs[p.turn]" v-bind:fill="colors[p.turn]" v-on:click="click_piece(p)"></circle>
+    <circle v-for="p in markers" v-bind:cx="grid_x(p.x)" v-bind:cy="grid_y(p.y)" r="10" fill="gray" v-on:click="click_marker(p)"></circle>
+  </svg>
+  <div>
+    <p>
+      <button type="button" v-on:click="reset_board()">Reset</button>
+      <button type="button" v-on:click="best_move()">Best Move</button>
+      <button type="button" v-on:click="rewind()" v-bind:disabled="!can_fb()">&lt;&lt;</button>
+      <button type="button" v-on:click="backward()" v-bind:disabled="!can_fb()">&lt;</button>
+      <button type="button" v-on:click="forward()" v-bind:disabled="!can_fb()">&gt;</button>
+      <button type="button" v-on:click="last()" v-bind:disabled="!can_fb()">&gt;&gt;</button>
+    </p>
+  </div>
+  <div>
+    <span v-if="this.moving == null"> Mode : 
+    <input type="radio" v-model="mode" value="0" v-on:click="edit_mode()"> Edit
+    <input type="radio" v-model="mode" value="1" v-on:click="play_mode()"> Play
+    </span><br>
+    <span v-if="this.mode == 0 && this.moving == null"> Turn : 
+    <input type="radio" v-model="turn" value="0"> black
+    <input type="radio" v-model="turn" value="1"> brown
+    </span>
+    <span v-if="this.mode == 1"> Turn : {{colors[this.turn]}}</span>
+    <p v-if="this.moving == null"> Value = {{ bf }} </p>
+    <p v-if="this.mode == 1"> cur = {{ cur }} </p>
+    <p>BoardSize <select name="boardsize" v-model="size" v-on:change="change_board()">
+	<option value="0">33</option>
+	<option value="1">31</option>
+	<option value="2">25</option></select>
+    <p>
+    <textarea v-model="message" cols=80 rows=10></textarea>
+    </p>
+  </div>
+</div>
+  <script src="./16musashi.js"></script>
+</body>
+</html>
