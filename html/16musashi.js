@@ -287,7 +287,6 @@ var app = new Vue({
       this.markers = [];
       this.pieces = [];
       this.message = "";
-      this.turn = 1;
       this.mode = 0;
       this.cur = 0;
       if (this.init != null) {
@@ -323,6 +322,7 @@ var app = new Vue({
           }
         }
       }
+      this.turn = 1;
       black = [2, 2];
       for (let y = 0; y < 5; y++) {
 	for (let x = 0; x < 7; x++) {
