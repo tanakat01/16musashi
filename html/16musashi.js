@@ -302,7 +302,7 @@ var app = new Vue({
           } else {
             const width = [7, 7, 5][this.size];
             for (let y = 0; y < 5; y++) {
-	      for (let x = 0; x < 7; x++) {
+	      for (let x = 0; x < width; x++) {
 	        if (this.has_point(x, y)) {
 	          this.points.push({'x' : x, 'y' : y, 'r' : 2.5, 'color' : 'gray'});
 	        }
@@ -317,6 +317,7 @@ var app = new Vue({
 	        }
               }
             }
+            this.mode = 1;
             this.save_state();
             return;
           }
