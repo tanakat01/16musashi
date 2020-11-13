@@ -35,6 +35,7 @@ var app = new Vue({
     lines: [],
     pieces: [], 
     moving: null,
+    init: null, 
     markers: [],
     message: "",
     mode : 0,
@@ -289,6 +290,38 @@ var app = new Vue({
       this.turn = 1;
       this.mode = 0;
       this.cur = 0;
+      if (this.init != null) {
+        const istr = this.init.replace(/,/g, "");
+        if (istr.length != [35, 35, 25][this.size]) {
+          console.log('istr.length=' + JSON.stringify(istr.length));
+        } else {
+          console.log('length OK');
+          m = istr.match(/X/g);
+          if (m == null || m.length != 1) {
+            console.log('black piece missmatch');
+          } else {
+            const width = [7, 7, 5][this.size];
+            for (let y = 0; y < 5; y++) {
+	      for (let x = 0; x < 7; x++) {
+	        if (this.has_point(x, y)) {
+	          this.points.push({'x' : x, 'y' : y, 'r' : 2.5, 'color' : 'gray'});
+	        }
+                const c = istr[y * width + x];
+                if (c == 'o') {
+	          this.pieces.push({'x' : x, 'y' : y, 'turn' : 1});
+	        } else if (c == 'X') {
+	          this.pieces.push({'x' : x, 'y' : y, 'turn' : 0});
+	        }
+	        for (let n of this.neighbors({'x' : x, 'y' : y}, true)) {
+	          this.lines.push({'x1' : x, 'y1' : y, 'x2' : n.x, 'y2' : n.y});
+	        }
+              }
+            }
+            this.save_state();
+            return;
+          }
+        }
+      }
       black = [2, 2];
       for (let y = 0; y < 5; y++) {
 	for (let x = 0; x < 7; x++) {
@@ -333,6 +366,34 @@ var app = new Vue({
     }
   },
   created: function () {
+    const param = location.search.substring(1);
+    if (param) {
+        const params = param.split('&');
+        const paramArray = [];
+        for (let p of params) {
+            var cols = p.split('=');
+            if (cols.length == 2) {
+                paramArray[cols[0]] = cols[1];
+            }
+        }
+        this.size = 0;
+        if ("size" in paramArray) {
+            i = ["33", "31", "25"].indexOf(paramArray["size"]);
+            if (i >= 0) {
+                this.size = i;
+            }
+        }
+        this.turn = 1;
+        if ("turn" in paramArray) {
+            i = ["black", "brown"].indexOf(paramArray["turn"]);
+            if (i >= 0) {
+                this.turn = i;
+            }
+        }
+        if ("init" in paramArray) {
+            this.init = paramArray["init"];
+        }
+    }
     this.reset_board();
   }
 });
